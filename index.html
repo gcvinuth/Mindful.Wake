@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindfulWake — Wake Up Conscious</title>
+    <meta name="description" content="An alarm app that wakes your mind with cognitive challenges. Start every day mindful and fully awake.">
+    <meta name="theme-color" content="#0a0a14">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="mindfulwake_icon_1776407461951.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- PDF.js for PDF parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Tesseract.js for OCR from images -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Mammoth.js for DOCX parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ========== MAIN APP ========== -->
+    <div id="app">
+        <!-- Ambient background -->
+        <div class="ambient-bg">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+        </div>
+
+        <!-- Header -->
+        <header id="app-header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="14" stroke="url(#logoGrad)" stroke-width="2.5"/>
+                    <path d="M16 6v10l6 4" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                            <stop stop-color="#a78bfa"/>
+                            <stop offset="1" stop-color="#60a5fa"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span class="logo-text">MindfulWake</span>
+            </div>
+            <div class="live-clock" id="liveClock">--:--:--</div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <nav id="tab-nav">
+            <button class="tab-btn active" data-tab="alarms" id="tab-alarms-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/><path d="M5 3L2 6M22 6l-3-3"/></svg>
+                <span>Alarms</span>
+            </button>
+            <button class="tab-btn" data-tab="create" id="tab-create-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+                <span>New</span>
+            </button>
+            <button class="tab-btn" data-tab="questions" id="tab-questions-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>My Q's</span>
+            </button>
+            <button class="tab-btn" data-tab="settings" id="tab-settings-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <span>Settings</span>
+            </button>
+        </nav>
+
+        <!-- ===== ALARMS TAB ===== -->
+        <section id="tab-alarms" class="tab-content active">
+            <div class="section-header">
+                <h1>Your Alarms</h1>
+                <p class="subtitle">Tap an alarm to toggle it on or off</p>
+            </div>
+            <!-- Notification permission banner -->
+            <div id="notif-banner" class="notif-banner hidden">
+                <div class="notif-banner-icon">🔔</div>
+                <div class="notif-banner-text">
+                    <strong>Enable Notifications</strong>
+                    <p>Allow notifications so alarms ring even when the app is in the background.</p>
+                </div>
+                <button class="btn-enable-notif" id="enable-notif-btn">Enable</button>
+            </div>
+            <div id="alarm-list" class="alarm-list">
+                <!-- Alarms rendered here -->
+            </div>
+            <div id="no-alarms" class="empty-state">
+                <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+                    <circle cx="40" cy="40" r="30" opacity="0.3"/>
+                    <path d="M40 20v20l12 8" opacity="0.5" stroke-linecap="round"/>
+                    <path d="M20 12l-6-6M60 12l6-6" opacity="0.3" stroke-linecap="round"/>
+                </svg>
+                <h3>No alarms yet</h3>
+                <p>Create your first mindful alarm to start waking up better.</p>
+                <button class="btn-primary" id="goto-create-btn">Create Alarm</button>
+            </div>
+        </section>
+
+        <!-- ===== CREATE ALARM TAB ===== -->
+        <section id="tab-create" class="tab-content">
+            <div class="section-header">
+                <h1>Create Alarm</h1>
+                <p class="subtitle">Set your wake-up time and challenge level</p>
+            </div>
+            <div class="create-form">
+                <!-- Time Picker -->
+                <div class="form-card" id="time-picker-card">
+                    <label class="form-label">Wake Up Time</label>
+                    <div class="time-picker" id="time-picker">
+                        <div class="time-scroll-col">
+                            <button class="scroll-btn up" data-target="hour" data-dir="up" id="hour-up">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                            </button>
+                            <div class="time-value" id="hour-display">07</div>
+                            <button class="scroll-btn down" data-target="hour" data-dir="down" id="hour-down">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                        </div>
+                        <div class="time-sep">:</div>
+                        <div class="time-scroll-col">
+                            <button class="scroll-btn up" data-target="minute" data-dir="up" id="minute-up">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                            </button>
+                            <div class="time-value" id="minute-display">00</div>
+                            <button class="scroll-btn down" data-target="minute" data-dir="down" id="minute-down">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                        </div>
+                        <div class="ampm-toggle" id="ampm-toggle">
+                            <button class="ampm-btn active" data-ampm="AM" id="am-btn">AM</button>
+                            <button class="ampm-btn" data-ampm="PM" id="pm-btn">PM</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alarm Label -->
+                <div class="form-card" id="label-card">
+                    <label class="form-label" for="alarm-label">Alarm Label</label>
+                    <input type="text" id="alarm-label" class="form-input" placeholder="e.g. Morning Workout" maxlength="40">
+                </div>
+
+                <!-- Question Source -->
+                <div class="form-card" id="question-source-card">
+                    <label class="form-label">Question Source</label>
+                    <p class="form-hint">Choose where to pull questions from when this alarm rings.</p>
+                    <div class="source-selector">
+                        <button class="source-btn active" data-source="builtin" id="source-builtin-btn">
+                            <span class="source-icon">🧠</span>
+                            <span class="source-name">Built-in</span>
+                        </button>
+                        <button class="source-btn" data-source="custom" id="source-custom-btn">
+                            <span class="source-icon">📝</span>
+                            <span class="source-name">My Questions</span>
+                        </button>
+                        <button class="source-btn" data-source="mixed" id="source-mixed-btn">
+                            <span class="source-icon">🔀</span>
+                            <span class="source-name">Mixed</span>
+                        </button>
+                    </div>
+                    <div id="no-custom-warning" class="custom-warning hidden">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span>No custom questions yet. <a href="#" id="goto-questions-link">Add some →</a></span>
+                    </div>
+                </div>
+
+                <!-- Question Count -->
+                <div class="form-card" id="question-count-card">
+                    <label class="form-label">Questions to Answer</label>
+                    <p class="form-hint">More questions = deeper wake-up. You must answer all correctly to dismiss the alarm.</p>
+                    <div class="question-slider">
+                        <input type="range" id="question-count" min="1" max="10" value="3" class="range-slider">
+                        <div class="range-labels">
+                            <span>1</span>
+                            <span class="range-value" id="question-count-display">3 questions</span>
+                            <span>10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Difficulty (shown for builtin/mixed) -->
+                <div class="form-card" id="difficulty-card">
+                    <label class="form-label">Difficulty</label>
+                    <div class="difficulty-selector">
+                        <button class="diff-btn" data-diff="easy" id="diff-easy">
+                            <span class="diff-emoji">🌅</span>
+                            <span class="diff-name">Gentle</span>
+                            <span class="diff-desc">Simple math & awareness</span>
+                        </button>
+                        <button class="diff-btn active" data-diff="medium" id="diff-medium">
+                            <span class="diff-emoji">🧠</span>
+                            <span class="diff-name">Focused</span>
+                            <span class="diff-desc">Logic & reasoning</span>
+                        </button>
+                        <button class="diff-btn" data-diff="hard" id="diff-hard">
+                            <span class="diff-emoji">⚡</span>
+                            <span class="diff-name">Intense</span>
+                            <span class="diff-desc">Complex problem solving</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Repeat Days -->
+                <div class="form-card" id="repeat-card">
+                    <label class="form-label">Repeat</label>
+                    <div class="day-selector">
+                        <button class="day-btn" data-day="0" id="day-sun">S</button>
+                        <button class="day-btn active" data-day="1" id="day-mon">M</button>
+                        <button class="day-btn active" data-day="2" id="day-tue">T</button>
+                        <button class="day-btn active" data-day="3" id="day-wed">W</button>
+                        <button class="day-btn active" data-day="4" id="day-thu">T</button>
+                        <button class="day-btn active" data-day="5" id="day-fri">F</button>
+                        <button class="day-btn" data-day="6" id="day-sat">S</button>
+                    </div>
+                </div>
+
+                <button class="btn-primary btn-large" id="save-alarm-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+                    Save Alarm
+                </button>
+            </div>
+        </section>
+
+        <!-- ===== MY QUESTIONS TAB ===== -->
+        <section id="tab-questions" class="tab-content">
+            <div class="section-header">
+                <h1>My Questions</h1>
+                <p class="subtitle">Import your own MCQs from files or create them manually</p>
+            </div>
+
+            <!-- Import Section -->
+            <div class="form-card import-card" id="import-card">
+                <label class="form-label">Import Questions</label>
+                <p class="form-hint">Upload a file containing your questions. We'll parse MCQs automatically. Supported: PDF, Images (OCR), DOCX, TXT.</p>
+                
+                <div class="import-format-info">
+                    <button class="format-info-toggle" id="format-info-toggle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        How should I format my questions?
+                    </button>
+                    <div class="format-info-content hidden" id="format-info-content">
+                        <p>Use this format in your file (each question separated by a blank line):</p>
+                        <pre class="format-example">Q: What is the capital of France?
+A) London
+B) Paris *
+C) Berlin
+D) Madrid
+
+Q: Which planet is closest to the sun?
+A) Venus
+B) Earth
+C) Mercury *
+D) Mars</pre>
+                        <p class="format-note">Mark the correct answer with an asterisk (*). You can also use "correct:" or "answer:" labels.</p>
+                    </div>
+                </div>
+
+                <div class="import-drop-zone" id="import-drop-zone">
+                    <input type="file" id="file-import-input" accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.gif,.docx,.doc,.txt,.md,.csv" hidden>
+                    <div class="drop-zone-content">
+                        <svg class="drop-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M24 32V16M16 24l8-8 8 8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M40 32v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6" stroke-linecap="round"/>
+                        </svg>
+                        <p class="drop-text">Drag & drop or <span class="drop-browse">browse files</span></p>
+                        <p class="drop-formats">PDF · Images · DOCX · TXT</p>
+                    </div>
+                </div>
+
+                <!-- Import Progress -->
+                <div class="import-progress hidden" id="import-progress">
+                    <div class="import-progress-bar">
+                        <div class="import-progress-fill" id="import-progress-fill"></div>
+                    </div>
+                    <p class="import-status" id="import-status">Processing file...</p>
+                </div>
+            </div>
+
+            <!-- Manual Add -->
+            <div class="form-card" id="manual-add-card">
+                <label class="form-label">Add Manually</label>
+                <div class="manual-form">
+                    <input type="text" id="manual-question" class="form-input" placeholder="Type your question here..." maxlength="500">
+                    <div class="manual-options">
+                        <div class="manual-option-row">
+                            <label class="option-radio">
+                                <input type="radio" name="correct-option" value="0" checked>
+                                <span class="radio-mark"></span>
+                            </label>
+                            <input type="text" class="form-input manual-opt-input" id="manual-opt-0" placeholder="Option A (correct)" maxlength="200">
+                        </div>
+                        <div class="manual-option-row">
+                            <label class="option-radio">
+                                <input type="radio" name="correct-option" value="1">
+                                <span class="radio-mark"></span>
+                            </label>
+                            <input type="text" class="form-input manual-opt-input" id="manual-opt-1" placeholder="Option B" maxlength="200">
+                        </div>
+                        <div class="manual-option-row">
+                            <label class="option-radio">
+                                <input type="radio" name="correct-option" value="2">
+                                <span class="radio-mark"></span>
+                            </label>
+                            <input type="text" class="form-input manual-opt-input" id="manual-opt-2" placeholder="Option C" maxlength="200">
+                        </div>
+                        <div class="manual-option-row">
+                            <label class="option-radio">
+                                <input type="radio" name="correct-option" value="3">
+                                <span class="radio-mark"></span>
+                            </label>
+                            <input type="text" class="form-input manual-opt-input" id="manual-opt-3" placeholder="Option D" maxlength="200">
+                        </div>
+                    </div>
+                    <p class="form-hint" style="margin-top: 8px; margin-bottom: 0;">Select the radio button next to the correct answer.</p>
+                    <button class="btn-primary" id="add-manual-btn" style="margin-top: 14px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Question
+                    </button>
+                </div>
+            </div>
+
+            <!-- Question Library -->
+            <div class="form-card" id="library-card">
+                <div class="library-header">
+                    <label class="form-label" style="margin-bottom:0">Your Question Library</label>
+                    <span class="library-count" id="library-count">0 questions</span>
+                </div>
+                <div id="custom-questions-list" class="custom-questions-list">
+                    <!-- Questions rendered here -->
+                </div>
+                <div id="no-custom-questions" class="empty-state-mini">
+                    <p>No custom questions yet. Import a file or add manually above.</p>
+                </div>
+                <div class="library-actions" id="library-actions" style="display:none">
+                    <button class="btn-danger-sm" id="clear-all-questions-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                        Clear All
+                    </button>
+                    <button class="btn-export-sm" id="export-questions-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SETTINGS TAB ===== -->
+        <section id="tab-settings" class="tab-content">
+            <div class="section-header">
+                <h1>Settings</h1>
+                <p class="subtitle">Customize your wake-up experience</p>
+            </div>
+            <div class="settings-list">
+                <!-- Notification Permission -->
+                <div class="form-card" id="notification-setting">
+                    <label class="form-label">🔔 Alarm Notifications</label>
+                    <p class="form-hint">Enable browser notifications so your alarm works even when the tab is in background. This is essential for the alarm to actually wake you up.</p>
+                    <div class="notif-status-row">
+                        <span class="notif-status" id="notif-status">
+                            <span class="notif-dot denied"></span>
+                            Not enabled
+                        </span>
+                        <button class="btn-primary" id="request-notif-btn" style="padding: 8px 18px; font-size: 0.82rem;">
+                            Enable Notifications
+                        </button>
+                    </div>
+                </div>
+                <div class="form-card" id="sound-setting">
+                    <label class="form-label">Alarm Sound</label>
+                    <div class="sound-select-row">
+                        <select class="form-select" id="alarm-sound-select">
+                            <option value="gentle">Gentle Chime</option>
+                            <option value="classic" selected>Classic Alarm</option>
+                            <option value="nature">Nature Birds</option>
+                            <option value="urgent">Urgent Buzz</option>
+                        </select>
+                        <button class="btn-test" id="test-sound-btn">Test</button>
+                    </div>
+                </div>
+                <div class="form-card" id="snooze-setting">
+                    <label class="form-label">Allow Snooze</label>
+                    <p class="form-hint">If enabled, you get ONE 2-minute snooze before questions appear. Recommended: OFF for maximum effectiveness.</p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="snooze-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="form-card" id="theme-setting">
+                    <label class="form-label">Wrong Answer Penalty</label>
+                    <p class="form-hint">Add an extra question for each wrong answer to keep you sharp.</p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="penalty-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="form-card" id="about-card">
+                    <label class="form-label">About MindfulWake</label>
+                    <p class="form-hint">Wake up with intention. Each morning your brain needs a gentle push to transition from sleep to full awareness. MindfulWake uses cognitive challenges to activate your prefrontal cortex, ensuring you start your day sharp, focused, and fully present.</p>
+                    <p class="form-hint" style="margin-top:8px;opacity:0.5">v2.0.0 • Made with 💜</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ========== ALARM RINGING OVERLAY ========== -->
+    <div id="alarm-overlay" class="alarm-overlay hidden">
+        <div class="alarm-overlay-bg"></div>
+        
+        <!-- Phase 1: Ringing -->
+        <div id="ringing-phase" class="overlay-phase">
+            <div class="ring-animation">
+                <div class="ring-pulse"></div>
+                <div class="ring-pulse delay-1"></div>
+                <div class="ring-pulse delay-2"></div>
+                <svg class="ring-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M32 8a18 18 0 0 1 18 18v12a6 6 0 0 1-6 6H20a6 6 0 0 1-6-6V26A18 18 0 0 1 32 8z"/>
+                    <path d="M24 44v2a8 8 0 0 0 16 0v-2"/>
+                    <path d="M32 4v4"/>
+                    <path d="M10 12L6 8M54 12l4-4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <h2 class="ring-time" id="ring-time">07:00 AM</h2>
+            <p class="ring-label" id="ring-label">Morning Alarm</p>
+            <div class="ring-actions">
+                <button class="btn-dismiss" id="start-quiz-btn" title="Start Quiz">
+                    <span>Wake Up & Answer</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="btn-snooze hidden" id="snooze-btn">Snooze (2 min)</button>
+            </div>
+        </div>
+
+        <!-- Phase 2: Quiz -->
+        <div id="quiz-phase" class="overlay-phase hidden">
+            <div class="quiz-header">
+                <div class="quiz-progress-bar">
+                    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+                </div>
+                <div class="quiz-status">
+                    <span id="quiz-question-counter">Question 1 of 3</span>
+                    <span id="quiz-score" class="quiz-score">0 correct</span>
+                </div>
+            </div>
+            <div class="quiz-card" id="quiz-card">
+                <div class="quiz-category" id="quiz-category">
+                    <span class="cat-icon">🧠</span>
+                    <span class="cat-name">Logic</span>
+                </div>
+                <h2 class="quiz-question" id="quiz-question">Loading question...</h2>
+                <div class="quiz-options" id="quiz-options">
+                    <!-- Options rendered here -->
+                </div>
+                <div class="quiz-feedback hidden" id="quiz-feedback">
+                    <div class="feedback-icon" id="feedback-icon"></div>
+                    <p class="feedback-text" id="feedback-text"></p>
+                    <button class="btn-next" id="next-question-btn">Next Question →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 3: Complete -->
+        <div id="complete-phase" class="overlay-phase hidden">
+            <div class="complete-content">
+                <div class="complete-icon">
+                    <svg viewBox="0 0 80 80" fill="none">
+                        <circle cx="40" cy="40" r="36" stroke="url(#compGrad)" stroke-width="3"/>
+                        <path d="M24 40l10 10 22-22" stroke="url(#compGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="check-draw"/>
+                        <defs>
+                            <linearGradient id="compGrad" x1="0" y1="0" x2="80" y2="80">
+                                <stop stop-color="#34d399"/>
+                                <stop offset="1" stop-color="#60a5fa"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h2 class="complete-title">Good Morning! ☀️</h2>
+                <p class="complete-subtitle" id="complete-subtitle">You answered 3/3 correctly. Your mind is sharp!</p>
+                <div class="complete-stats" id="complete-stats">
+                    <div class="stat">
+                        <span class="stat-value" id="stat-correct">3</span>
+                        <span class="stat-label">Correct</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="stat-wrong">0</span>
+                        <span class="stat-label">Wrong</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="stat-time">0:45</span>
+                        <span class="stat-label">Time</span>
+                    </div>
+                </div>
+                <div class="morning-message" id="morning-message">
+                    <p>"The secret of getting ahead is getting started."</p>
+                    <span>— Mark Twain</span>
+                </div>
+                <button class="btn-primary btn-large" id="dismiss-alarm-btn">Start My Day ☀️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="questions.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
